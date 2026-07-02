@@ -9,7 +9,6 @@ import {
   createProject,
   updateProject,
   deleteProject,
-  updateMemberRole,
 } from "../controllers/project.controllers.js";
 import { validate } from "../middlewares/validator.middleware.js";
 import {
