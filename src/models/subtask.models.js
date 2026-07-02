@@ -6,10 +6,22 @@ const subTaskSchema = new Schema({
         required: true,
         trim:true
     },
+    description: {
+        type: String,
+    },
     task: {
         type: Schema.Types.ObjectId,
         ref: "Task",
         required:true
+    },
+    assignedTo: {
+        type: Schema.Types.ObjectId,
+        ref: "User",
+    },
+    status: {
+        type: String,
+        enum: ["todo", "in_progress", "done"],
+        default: "todo"
     },
     isCompleted: {
         type: Boolean,
@@ -17,7 +29,7 @@ const subTaskSchema = new Schema({
     },
     createdBy: {
         type: Schema.Types.ObjectId,
-        ref: "user",
+        ref: "User",
         required: true
     }
 }, { timestamps: true })
