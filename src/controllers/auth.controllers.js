@@ -7,6 +7,7 @@ import {
     sendEmail
 } from "../utils/mail.js"
 import jwt from "jsonwebtoken"
+import crypto from "crypto"
 
 const generateAccessAndRefreshToken = async (userId) => {
     try {
@@ -26,8 +27,8 @@ const generateAccessAndRefreshToken = async (userId) => {
 }
 
 const registerUser = asyncHandler(async (req, res) => {
-    const { email, username, password, role } = req.body
-    
+    const { email, username, password, fullName } = req.body
+
     const existedUser = await User.findOne({
         $or: [{ username }, { email }]
     });
@@ -40,6 +41,7 @@ const registerUser = asyncHandler(async (req, res) => {
         email,
         password,
         username,
+        fullname: fullName,
         isEmailVerified: false,
     });
 
@@ -81,12 +83,14 @@ const registerUser = asyncHandler(async (req, res) => {
 
 const loginUser = asyncHandler(async (req, res) => {
     const { email, password, username } = req.body;
-    
+
     if (!username && !email) {
         throw new ApiError(400, "Username or email is required");
     }
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({
+        $or: [{ email: email }, { username: username }]
+    });
 
     if (!user) {
         throw new ApiError(400, "User does not exists");
@@ -155,7 +159,7 @@ const getCurrentUser = asyncHandler(async (req, res) => {
         .json(
             new ApiResponse(
                 200,
-                req.user,
+                { user: req.user },
                 "Current user fetched successfully"
         )
     )
@@ -312,27 +316,27 @@ const forgotPasswordRequest = asyncHandler(async (req, res) => {
             new ApiResponse(
                 200,
                 {},
-                "Password reset mail has been sent to your mail id"
-            )
+                "Password reset mail has been sent to your email"
+            ),
     )
 })
 
 const resetForgotPassword = asyncHandler(async (req, res) => {
     const {resetToken} = req.params
-    const { newToken } = req.body
-    
+    const { newPassword } = req.body
+
     let hashedToken = crypto
         .createHash("sha256")
         .update(resetToken)
         .digest("hex")
-    
-    await User.findOne({
+
+    const user = await User.findOne({
         forgotPasswordToken: hashedToken,
         forgotPasswordExpiry: {$gt: Date.now()}
     })
 
     if (!user) {
-        throw new ApiError(489, "Token is invalid or expired")
+        throw new ApiError(400, "Token is invalid or expired")
     }
 
     user.forgotPasswordExpiry = undefined
@@ -340,11 +344,11 @@ const resetForgotPassword = asyncHandler(async (req, res) => {
 
     user.password = newPassword
     await user.save({ validateBeforeSave: false })
-    
+
     return res
         .status(200)
         .json(
-        new ApiResponse(200, {}, "password resset successfully")
+        new ApiResponse(200, {}, "Password reset successfully")
     )
 })
 
