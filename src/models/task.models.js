@@ -6,7 +6,7 @@ const taskSchema = new Schema(
   {
     title: {
       type: String,
-      ref: true,
+      required: true,
       trim: true,
     },
     description: String,
@@ -39,4 +39,4 @@ const taskSchema = new Schema(
     
   },{ timestamps: true });
 
-export const Task = mongoose.Schema("Task", taskSchema);
+export const Task = mongoose.model("Task", taskSchema);

@@ -14,7 +14,7 @@ const projectmemberSchema = new Schema({
     },
     role: {
         type: String,
-        ref: AvailableUserRole,
+        enum: AvailableUserRole,
         default: UserRolesEnum.MEMBER
     },
 }, { timestamps: true })

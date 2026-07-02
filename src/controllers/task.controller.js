@@ -6,14 +6,7 @@ import { ProjectNote } from "../models/note.models.js";
 import { ApiResponse } from "../utils/api-response.js";
 import { ApiError } from "../utils/api-error.js";
 import { asyncHandler } from "../utils/async-handler.js";
-import {
-  emailVerificationMailgenContent,
-  forgotPasswordMailgenContent,
-  sendEmail,
-} from "../utils/mail.js";
 import mongoose from "mongoose";
-import { AvailableUserRole, UserRolesEnum } from "../utils/constants.js";
-import { pipeline } from "nodemailer/lib/xoauth2/index.js";
 
 
 const getTask = asyncHandler(async (req, res) => {
@@ -28,13 +21,9 @@ const getTask = asyncHandler(async (req, res) => {
         project: new mongoose.Types.ObjectId(projectId)
     }).populate("assignedTo", "avatar username fullName");
 
-    if (!tasks) {
-        throw new ApiError(404, "Task not found")
-    }
-
     return res
         .status(200)
-        .json(new ApiResponse(200, tasks, "Tasks fetched successfully"))
+        .json(new ApiResponse(200, { tasks }, "Tasks fetched successfully"))
 });
 
 const createTask = asyncHandler(async (req, res) => {
@@ -47,14 +36,11 @@ const createTask = asyncHandler(async (req, res) => {
     }
 
     const files = req.files || []
-
-    files.map((file) => {
-        return {
-            url: `${process.env.SERVER_URL}/images/${file.originalname}`,
-            mimetype: file.mimetype,
-            size: file.size
-        }
-    })
+    const attachments = files.map((file) => ({
+        url: `${process.env.SERVER_URL}/images/${file.originalname}`,
+        mimetype: file.mimetype,
+        size: file.size
+    }))
 
     const task = await Task.create({
         title,
@@ -88,7 +74,7 @@ const getTaskById = asyncHandler(async (req, res) => {
         $lookup: {
           from: "users",
           localField: "assignedTo",
-          foreginField: "_id",
+          foreignField: "_id",
           as: "assignedTo",
           pipeline: [
             {
@@ -151,7 +137,7 @@ const getTaskById = asyncHandler(async (req, res) => {
     }
     return res
         .status(200)
-        .json(new ApiResponse(200, task[0], "Task fetched successfully"));
+        .json(new ApiResponse(200, { task: task[0] }, "Task fetched successfully"));
 });
 
 const UpdateTask = asyncHandler(async (req, res) => {
@@ -191,7 +177,7 @@ const UpdateTask = asyncHandler(async (req, res) => {
 
   return res
     .status(200)
-    .json(new ApiResponse(200, updatedTask, "Task updated successfully"));
+    .json(new ApiResponse(200, { task: updatedTask }, "Task updated successfully"));
 });
 
 const deleteTask = asyncHandler(async (req, res) => {
