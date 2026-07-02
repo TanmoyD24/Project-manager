@@ -85,6 +85,78 @@ const addMemberToValidator = () => {
   ];
 };
 
+const createTaskValidator = () => {
+  return [
+    body("title").trim().notEmpty().withMessage("Title is required"),
+    body("description").optional().trim(),
+    body("assignedTo")
+      .optional()
+      .isMongoId()
+      .withMessage("Invalid user ID format for assignedTo"),
+    body("status")
+      .optional()
+      .trim()
+      .notEmpty()
+      .withMessage("Status cannot be empty if provided"),
+  ];
+};
+
+const updateTaskValidator = () => {
+  return [
+    body("title")
+      .optional()
+      .trim()
+      .notEmpty()
+      .withMessage("Title cannot be empty"),
+    body("description").optional().trim(),
+    body("assignedTo")
+      .optional()
+      .isMongoId()
+      .withMessage("Invalid user ID format for assignedTo"),
+    body("status")
+      .optional()
+      .trim()
+      .notEmpty()
+      .withMessage("Status cannot be empty"),
+  ];
+};
+
+const createSubTaskValidator = () => {
+  return [
+    body("title").trim().notEmpty().withMessage("Title is required"),
+    body("description").optional().trim(),
+    body("assignedTo")
+      .optional()
+      .isMongoId()
+      .withMessage("Invalid user ID format for assignedTo"),
+    body("status")
+      .optional()
+      .trim()
+      .notEmpty()
+      .withMessage("Status cannot be empty if provided"),
+  ];
+};
+
+const updateSubTaskValidator = () => {
+  return [
+    body("title")
+      .optional()
+      .trim()
+      .notEmpty()
+      .withMessage("Title cannot be empty"),
+    body("description").optional().trim(),
+    body("assignedTo")
+      .optional()
+      .isMongoId()
+      .withMessage("Invalid user ID format for assignedTo"),
+    body("status")
+      .optional()
+      .trim()
+      .notEmpty()
+      .withMessage("Status cannot be empty"),
+  ];
+};
+
 
 export {
   userRegisterValidator,
@@ -94,4 +166,8 @@ export {
   userResetForgotPasswordValidator,
   createProjectValidator,
   addMemberToValidator,
+  createTaskValidator,
+  updateTaskValidator,
+  createSubTaskValidator,
+  updateSubTaskValidator,
 };
