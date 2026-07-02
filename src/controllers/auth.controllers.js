@@ -2,7 +2,10 @@ import { User } from "../models/user.models.js"
 import { ApiResponse } from "../utils/api-response.js"
 import { ApiError } from "../utils/api-error.js"
 import { asyncHandler } from "../utils/async-handler.js"
-import { emailVerificationMailgenContent, forgotPasswordMailgenContent, sendEmail } from "../utils/mail.js"
+import {
+    emailVerificationMailgenContent, forgotPasswordMailgenContent,
+    sendEmail
+} from "../utils/mail.js"
 import jwt from "jsonwebtoken"
 
 const generateAccessAndRefreshToken = async (userId) => {
