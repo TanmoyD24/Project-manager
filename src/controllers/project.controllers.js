@@ -50,6 +50,11 @@ const getProjectById = asyncHandler(async (req, res) => {
 const createProject = asyncHandler(async (req, res) => {
   const { name, description } = req.body
 
+  const existingProject = await Project.findOne({ name });
+  if (existingProject) {
+    throw new ApiError(400, `A project named "${name}" already exists`);
+  }
+
   const project = await Project.create({
     name,
     description,
@@ -62,7 +67,7 @@ const createProject = asyncHandler(async (req, res) => {
       project: new mongoose.Types.ObjectId(project._id),
       role: UserRolesEnum.ADMIN
     }
-  )
+  );
 
   return res
     .status(201)
@@ -213,6 +218,103 @@ const deleteMember = asyncHandler(async (req, res) => {
 
 });
 
+const getProjectNotes = asyncHandler(async (req, res) => {
+  const { projectId } = req.params;
+
+  const notes = await ProjectNote.find({
+    project: new mongoose.Types.ObjectId(projectId),
+  }).populate("createdBy", "username email fullName avatar");
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, { notes }, "Project notes fetched successfully"));
+});
+
+const createProjectNote = asyncHandler(async (req, res) => {
+  const { projectId } = req.params;
+  const { content } = req.body;
+
+  const note = await ProjectNote.create({
+    project: new mongoose.Types.ObjectId(projectId),
+    createdBy: new mongoose.Types.ObjectId(req.user._id),
+    content,
+  });
+
+  const populatedNote = await ProjectNote.findById(note._id).populate(
+    "createdBy",
+    "username email fullName avatar"
+  );
+
+  return res
+    .status(201)
+    .json(new ApiResponse(201, { note: populatedNote }, "Project note created successfully"));
+});
+
+const updateProjectNote = asyncHandler(async (req, res) => {
+  const { projectId, noteId } = req.params;
+  const { content } = req.body;
+
+  const note = await ProjectNote.findById(noteId);
+
+  if (!note) {
+    throw new ApiError(404, "Project note not found");
+  }
+
+  // Check if note belongs to project
+  if (note.project.toString() !== projectId) {
+    throw new ApiError(400, "Note does not belong to this project");
+  }
+
+  // Check if owner or admin/project_admin
+  const isOwner = note.createdBy.toString() === req.user._id.toString();
+  const isAdminOrProjectAdmin = [UserRolesEnum.ADMIN, UserRolesEnum.PROJECT_ADMIN].includes(req.user.role);
+
+  if (!isOwner && !isAdminOrProjectAdmin) {
+    throw new ApiError(403, "You do not have permission to edit this note");
+  }
+
+  note.content = content;
+  await note.save();
+
+  const populatedNote = await ProjectNote.findById(note._id).populate(
+    "createdBy",
+    "username email fullName avatar"
+  );
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, { note: populatedNote }, "Project note updated successfully"));
+});
+
+const deleteProjectNote = asyncHandler(async (req, res) => {
+  const { projectId, noteId } = req.params;
+
+  const note = await ProjectNote.findById(noteId);
+
+  if (!note) {
+    throw new ApiError(404, "Project note not found");
+  }
+
+  // Check if note belongs to project
+  if (note.project.toString() !== projectId) {
+    throw new ApiError(400, "Note does not belong to this project");
+  }
+
+  // Check if owner or admin/project_admin
+  const isOwner = note.createdBy.toString() === req.user._id.toString();
+  const isAdminOrProjectAdmin = [UserRolesEnum.ADMIN, UserRolesEnum.PROJECT_ADMIN].includes(req.user.role);
+
+  if (!isOwner && !isAdminOrProjectAdmin) {
+    throw new ApiError(403, "You do not have permission to delete this note");
+  }
+
+  await ProjectNote.findByIdAndDelete(noteId);
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, note, "Project note deleted successfully"));
+});
+
 export {
   addMemberToProject,
   deleteMember,
@@ -223,4 +325,8 @@ export {
   updateProject,
   deleteProject,
   updateMemberRole,
+  getProjectNotes,
+  createProjectNote,
+  updateProjectNote,
+  deleteProjectNote,
 };
