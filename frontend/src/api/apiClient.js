@@ -24,6 +24,10 @@ export const projectAPI = {
   updateMemberRole: (projectId, userId, role) =>
     apiClient.put(`/projects/${projectId}/members/${userId}`, { role }),
   removeMember: (projectId, userId) => apiClient.delete(`/projects/${projectId}/members/${userId}`),
+  getNotes: (projectId) => apiClient.get(`/projects/${projectId}/notes`),
+  createNote: (projectId, data) => apiClient.post(`/projects/${projectId}/notes`, data),
+  updateNote: (projectId, noteId, data) => apiClient.put(`/projects/${projectId}/notes/${noteId}`, data),
+  deleteNote: (projectId, noteId) => apiClient.delete(`/projects/${projectId}/notes/${noteId}`),
 };
 
 export const taskAPI = {
