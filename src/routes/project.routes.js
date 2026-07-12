@@ -9,6 +9,10 @@ import {
   createProject,
   updateProject,
   deleteProject,
+  getProjectNotes,
+  createProjectNote,
+  updateProjectNote,
+  deleteProjectNote,
 } from "../controllers/project.controllers.js";
 import { validate } from "../middlewares/validator.middleware.js";
 import {
@@ -19,6 +23,7 @@ import {
   userResetForgotPasswordValidator,
   createProjectValidator,
   addMemberToValidator,
+  createProjectNoteValidator,
 } from "../validator/index.js";
 import { verifyJWT, validateProjectPermission } from "../middlewares/auth.middleware.js";
 import { AvailableUserRole, UserRolesEnum } from "../utils/constants.js";
@@ -58,6 +63,29 @@ router
     .route("/:projectId/members/:userId")
     .put(validateProjectPermission([UserRolesEnum.ADMIN]),updateMemberRole)
     .delete(validateProjectPermission([UserRolesEnum.ADMIN]),deleteMember)
+
+router
+    .route("/:projectId/notes")
+    .get(validateProjectPermission(AvailableUserRole), getProjectNotes)
+    .post(
+        validateProjectPermission(AvailableUserRole),
+        createProjectNoteValidator(),
+        validate,
+        createProjectNote
+    );
+
+router
+    .route("/:projectId/notes/:noteId")
+    .put(
+        validateProjectPermission(AvailableUserRole),
+        createProjectNoteValidator(),
+        validate,
+        updateProjectNote
+    )
+    .delete(
+        validateProjectPermission(AvailableUserRole),
+        deleteProjectNote
+    );
     
 
 export default router;
