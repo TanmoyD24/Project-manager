@@ -57,7 +57,7 @@ const registerUser = asyncHandler(async (req, res) => {
         subject: "Plese verify your email",
         mailgenContent: emailVerificationMailgenContent(
             user.username,
-            `${req.protocol}://${req.get("host")}/api/v1/users/verify-email/${unHashedToken}`,
+            `${req.protocol}://${req.get("host")}/api/v1/auth/verify-email/${unHashedToken}`,
         ),
     });
 
@@ -89,7 +89,10 @@ const loginUser = asyncHandler(async (req, res) => {
     }
 
     const user = await User.findOne({
-        $or: [{ email: email }, { username: username }]
+        $or: [
+            ...(email ? [{ email }] : []),
+            ...(username ? [{ username }] : [])
+        ]
     });
 
     if (!user) {
@@ -226,7 +229,7 @@ const resentEmailVerification = asyncHandler(async (req, res) => {
         subject: "Plese verify your email",
         mailgenContent: emailVerificationMailgenContent(
             user.username,
-            `${req.protocol}://${req.get("host")}/api/v1/users/verify-email/${unHashedToken}`,
+            `${req.protocol}://${req.get("host")}/api/v1/auth/verify-email/${unHashedToken}`,
         ),
     });
 
@@ -242,7 +245,7 @@ const resentEmailVerification = asyncHandler(async (req, res) => {
 })
 
 const refreshAccessToken = asyncHandler(async (req, res) => {
-    const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken
+    const incomingRefreshToken = req.cookies?.refreshToken || req.body?.refreshToken
 
     if (!incomingRefreshToken) {
         throw new ApiError(401, "Unauthorized access")
@@ -252,8 +255,8 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
         const decodedToken = jwt.verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET);
 
         const user = await User.findById(decodedToken?._id);
-        if (!incomingRefreshToken) {
-            throw new ApiError(401, "Unauthorized access")
+        if (!user) {
+            throw new ApiError(401, "User not found or invalid token");
         }
         
         if (incomingRefreshToken !== user?.refreshToken) {
@@ -263,9 +266,9 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
         const options = {
             httpOnly: true,
             secure: true
-        }
+        };
 
-        const { accessToken, refreshToken: newRefreshToken } = await generateAccessAndRefreshToken(user._id)
+        const { accessToken, refreshToken: newRefreshToken } = await generateAccessAndRefreshToken(user._id);
         
         user.refreshToken = newRefreshToken;
         await user.save()
@@ -283,7 +286,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
             )
 
     } catch (error) {
-        throw new ApiError(401, "Invalid refresh token");
+        throw new ApiError(401, error?.message || "Invalid refresh token");
     }
 
 });
