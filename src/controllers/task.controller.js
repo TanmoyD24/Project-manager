@@ -54,7 +54,7 @@ const createTask = asyncHandler(async (req, res) => {
 
     return res
         .status(201)
-        .json(new ApiResponse(201, task, "Task created successfully"))
+        .json(new ApiResponse(201, { task }, "Task created successfully"))
 });
 
 const getTaskById = asyncHandler(async (req, res) => {
@@ -153,11 +153,15 @@ const UpdateTask = asyncHandler(async (req, res) => {
   if (description) updateFields.description = description;
   if (status) updateFields.status = status;
 
-  if (assignedTo) {
-    if (!mongoose.Types.ObjectId.isValid(assignedTo)) {
-      throw new ApiError(400, "Invalid user ID format for assignedTo");
+  if (assignedTo !== undefined) {
+    if (assignedTo === "" || assignedTo === null) {
+      updateFields.assignedTo = null;
+    } else {
+      if (!mongoose.Types.ObjectId.isValid(assignedTo)) {
+        throw new ApiError(400, "Invalid user ID format for assignedTo");
+      }
+      updateFields.assignedTo = new mongoose.Types.ObjectId(assignedTo);
     }
-    updateFields.assignedTo = new mongoose.Types.ObjectId(assignedTo);
   }
 
   const updatedTask = await Task.findByIdAndUpdate(
@@ -249,11 +253,15 @@ const updateSubTask = asyncHandler(async (req, res) => {
   if (description) updateFields.description = description;
   if (status) updateFields.status = status;
 
-  if (assignedTo) {
-    if (!mongoose.Types.ObjectId.isValid(assignedTo)) {
-      throw new ApiError(400, "Invalid user ID format for assignedTo");
+  if (assignedTo !== undefined) {
+    if (assignedTo === "" || assignedTo === null) {
+      updateFields.assignedTo = null;
+    } else {
+      if (!mongoose.Types.ObjectId.isValid(assignedTo)) {
+        throw new ApiError(400, "Invalid user ID format for assignedTo");
+      }
+      updateFields.assignedTo = new mongoose.Types.ObjectId(assignedTo);
     }
-    updateFields.assignedTo = new mongoose.Types.ObjectId(assignedTo);
   }
 
   const updatedSubTask = await SubTask.findByIdAndUpdate(
