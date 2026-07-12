@@ -90,7 +90,7 @@ const createTaskValidator = () => {
     body("title").trim().notEmpty().withMessage("Title is required"),
     body("description").optional().trim(),
     body("assignedTo")
-      .optional()
+      .optional({ checkFalsy: true })
       .isMongoId()
       .withMessage("Invalid user ID format for assignedTo"),
     body("status")
@@ -110,7 +110,7 @@ const updateTaskValidator = () => {
       .withMessage("Title cannot be empty"),
     body("description").optional().trim(),
     body("assignedTo")
-      .optional()
+      .optional({ checkFalsy: true })
       .isMongoId()
       .withMessage("Invalid user ID format for assignedTo"),
     body("status")
@@ -126,7 +126,7 @@ const createSubTaskValidator = () => {
     body("title").trim().notEmpty().withMessage("Title is required"),
     body("description").optional().trim(),
     body("assignedTo")
-      .optional()
+      .optional({ checkFalsy: true })
       .isMongoId()
       .withMessage("Invalid user ID format for assignedTo"),
     body("status")
@@ -146,7 +146,7 @@ const updateSubTaskValidator = () => {
       .withMessage("Title cannot be empty"),
     body("description").optional().trim(),
     body("assignedTo")
-      .optional()
+      .optional({ checkFalsy: true })
       .isMongoId()
       .withMessage("Invalid user ID format for assignedTo"),
     body("status")
@@ -154,6 +154,15 @@ const updateSubTaskValidator = () => {
       .trim()
       .notEmpty()
       .withMessage("Status cannot be empty"),
+  ];
+};
+
+const createProjectNoteValidator = () => {
+  return [
+    body("content")
+      .trim()
+      .notEmpty()
+      .withMessage("Note content is required"),
   ];
 };
 
@@ -170,4 +179,5 @@ export {
   updateTaskValidator,
   createSubTaskValidator,
   updateSubTaskValidator,
+  createProjectNoteValidator,
 };
