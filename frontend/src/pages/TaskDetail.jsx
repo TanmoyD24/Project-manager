@@ -32,7 +32,7 @@ function SubtaskItem({ subtask, onToggle, onDelete }) {
         onChange={(e) => onToggle(subtask._id, e.target.checked)}
         className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
       />
-      <span className={subtask.isCompleted ? "line-through text-gray-400" : "text-gray-900"} flex-1>
+      <span className={`${subtask.isCompleted ? "line-through text-gray-400" : "text-gray-900"} flex-1`}>
         {subtask.title}
       </span>
       <button

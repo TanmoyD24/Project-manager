@@ -4,12 +4,14 @@ import { projectAPI, taskAPI } from "../api/apiClient";
 import { Card, CardHeader, CardContent } from "../components/ui/Card";
 import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
+import Textarea from "../components/ui/Textarea";
 import Select from "../components/ui/Select";
 import Modal from "../components/ui/Modal";
 import Badge from "../components/ui/Badge";
 import EmptyState from "../components/ui/EmptyState";
 import { Loading } from "../components/ui/Loading";
 import Alert from "../components/ui/Alert";
+import { useAuth } from "../context/AuthContext";
 import {
   ArrowLeftIcon,
   PlusIcon,
@@ -20,6 +22,8 @@ import {
   UserIcon,
   ChevronDownIcon,
   ChevronRightIcon,
+  DocumentTextIcon,
+  ClipboardDocumentListIcon,
 } from "@heroicons/react/24/outline";
 
 const TASK_STATUSES = [
@@ -43,7 +47,7 @@ function SubtaskItem({ subtask, onToggle, onDelete }) {
         onChange={(e) => onToggle(subtask._id, e.target.checked)}
         className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
       />
-      <span className={subtask.isCompleted ? "line-through text-gray-400" : "text-gray-900"} flex-1>
+      <span className={`${subtask.isCompleted ? "line-through text-gray-400" : "text-gray-900"} flex-1`}>
         {subtask.title}
       </span>
       <button
@@ -65,7 +69,7 @@ function TaskCard({ task, onUpdate, onDelete, onClick }) {
   };
 
   return (
-    <Card hover onClick={onClick} className="cursor-pointer">
+    <Card hover onClick={onClick} className="cursor-pointer group">
       <div className="flex items-start justify-between">
         <div className="flex-1 min-w-0">
           <h3 className="font-medium text-gray-900 truncate">{task.title}</h3>
@@ -112,11 +116,15 @@ function TaskCard({ task, onUpdate, onDelete, onClick }) {
 function ProjectDetail() {
   const { projectId } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [project, setProject] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  // Tabs
+  const [activeTab, setActiveTab] = useState("board");
 
   // Modals
   const [showTaskModal, setShowTaskModal] = useState(false);
@@ -130,6 +138,13 @@ function ProjectDetail() {
   const [memberError, setMemberError] = useState("");
   const [memberSubmitting, setMemberSubmitting] = useState(false);
 
+  // Notes States
+  const [notes, setNotes] = useState([]);
+  const [noteForm, setNoteForm] = useState({ content: "" });
+  const [editingNote, setEditingNote] = useState(null);
+  const [showNoteModal, setShowNoteModal] = useState(false);
+  const [noteError, setNoteError] = useState("");
+
   const fetchProject = async () => {
     setLoading(true);
     try {
@@ -141,6 +156,15 @@ function ProjectDetail() {
       setProject(projectRes.data.data.project);
       setTasks(tasksRes.data.data.tasks || []);
       setMembers(membersRes.data.data.members || []);
+
+      // Fetch notes separately
+      try {
+        const notesRes = await projectAPI.getNotes(projectId);
+        setNotes(notesRes.data.data.notes || []);
+      } catch (noteErr) {
+        console.error("Failed to fetch notes", noteErr);
+      }
+
       setError("");
     } catch (err) {
       setError(err.response?.data?.message || "Failed to load project");
@@ -216,6 +240,49 @@ function ProjectDetail() {
     }
   };
 
+  // Notes Handlers
+  const handleSaveNote = async (content) => {
+    try {
+      if (editingNote) {
+        const response = await projectAPI.updateNote(projectId, editingNote._id, { content });
+        setNotes(notes.map((n) => (n._id === editingNote._id ? response.data.data.note : n)));
+      } else {
+        const response = await projectAPI.createNote(projectId, { content });
+        setNotes([response.data.data.note, ...notes]);
+      }
+      setShowNoteModal(false);
+      setEditingNote(null);
+      setNoteForm({ content: "" });
+      setNoteError("");
+    } catch (err) {
+      setNoteError(err.response?.data?.message || "Failed to save note");
+    }
+  };
+
+  const handleDeleteNote = async (noteId) => {
+    if (!window.confirm("Are you sure you want to delete this note?")) return;
+    try {
+      await projectAPI.deleteNote(projectId, noteId);
+      setNotes(notes.filter((n) => n._id !== noteId));
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to delete note");
+    }
+  };
+
+  const openCreateNoteModal = () => {
+    setEditingNote(null);
+    setNoteForm({ content: "" });
+    setNoteError("");
+    setShowNoteModal(true);
+  };
+
+  const openEditNoteModal = (note) => {
+    setEditingNote(note);
+    setNoteForm({ content: note.content });
+    setNoteError("");
+    setShowNoteModal(true);
+  };
+
   const openCreateTaskModal = () => {
     setEditingTask(null);
     setTaskForm({ title: "", description: "", status: "todo", assignedTo: "" });
@@ -258,6 +325,9 @@ function ProjectDetail() {
   const inProgressTasks = tasks.filter((t) => t.status === "in_progress");
   const doneTasks = tasks.filter((t) => t.status === "done");
 
+  const userMemberObj = members.find((m) => m.user?._id === user?._id);
+  const userRole = userMemberObj?.role;
+
   return (
     <div>
       <div className="flex items-center justify-between mb-8">
@@ -276,37 +346,142 @@ function ProjectDetail() {
             <UsersIcon className="h-5 w-5 mr-2" />
             Members ({members.length})
           </Button>
-          <Button onClick={openCreateTaskModal}>
-            <PlusIcon className="h-5 w-5 mr-2" />
-            New Task
-          </Button>
+          {activeTab === "board" ? (
+            <Button onClick={openCreateTaskModal}>
+              <PlusIcon className="h-5 w-5 mr-2" />
+              New Task
+            </Button>
+          ) : (
+            <Button onClick={openCreateNoteModal}>
+              <PlusIcon className="h-5 w-5 mr-2" />
+              Add Note
+            </Button>
+          )}
         </div>
       </div>
 
-      {/* Kanban Board */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        <KanbanColumn
-          title="To Do"
-          count={todoTasks.length}
-          tasks={todoTasks}
-          onTaskClick={openEditTaskModal}
-          onTaskDelete={handleDeleteTask}
-        />
-        <KanbanColumn
-          title="In Progress"
-          count={inProgressTasks.length}
-          tasks={inProgressTasks}
-          onTaskClick={openEditTaskModal}
-          onTaskDelete={handleDeleteTask}
-        />
-        <KanbanColumn
-          title="Done"
-          count={doneTasks.length}
-          tasks={doneTasks}
-          onTaskClick={openEditTaskModal}
-          onTaskDelete={handleDeleteTask}
-        />
+      {/* Sleek Tab switcher */}
+      <div className="flex border-b border-gray-200 mb-6">
+        <button
+          onClick={() => setActiveTab("board")}
+          className={`flex items-center space-x-2 py-3 px-4 border-b-2 font-medium text-sm transition-all ${
+            activeTab === "board"
+              ? "border-blue-600 text-blue-600"
+              : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+          }`}
+        >
+          <ClipboardDocumentListIcon className="h-5 w-5" />
+          <span>Tasks & Board</span>
+        </button>
+        <button
+          onClick={() => setActiveTab("notes")}
+          className={`flex items-center space-x-2 py-3 px-4 border-b-2 font-medium text-sm transition-all ${
+            activeTab === "notes"
+              ? "border-blue-600 text-blue-600"
+              : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+          }`}
+        >
+          <DocumentTextIcon className="h-5 w-5" />
+          <span>Project Notes</span>
+        </button>
       </div>
+
+      {/* Tab content */}
+      {activeTab === "board" ? (
+        <div className="grid gap-6 lg:grid-cols-3">
+          <KanbanColumn
+            title="To Do"
+            count={todoTasks.length}
+            tasks={todoTasks}
+            onTaskClick={openEditTaskModal}
+            onTaskDelete={handleDeleteTask}
+          />
+          <KanbanColumn
+            title="In Progress"
+            count={inProgressTasks.length}
+            tasks={inProgressTasks}
+            onTaskClick={openEditTaskModal}
+            onTaskDelete={handleDeleteTask}
+          />
+          <KanbanColumn
+            title="Done"
+            count={doneTasks.length}
+            tasks={doneTasks}
+            onTaskClick={openEditTaskModal}
+            onTaskDelete={handleDeleteTask}
+          />
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {notes.length === 0 ? (
+            <EmptyState
+              title="No notes yet"
+              description="Keep your team on the same page by posting project updates, wiki pages, or quick thoughts."
+              icon={DocumentTextIcon}
+              action={
+                <Button onClick={openCreateNoteModal}>
+                  <PlusIcon className="h-5 w-5 mr-2" />
+                  Create First Note
+                </Button>
+              }
+            />
+          ) : (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {notes.map((note) => {
+                const isOwner = note.createdBy?._id === user?._id;
+                const isAdminOrProjectAdmin = ["admin", "project_admin"].includes(userRole);
+                const canEdit = isOwner || isAdminOrProjectAdmin;
+
+                return (
+                  <Card key={note._id} className="flex flex-col justify-between hover:shadow-md transition-all">
+                    <div>
+                      <div className="flex items-center space-x-3 mb-4">
+                        <div className="h-8 w-8 bg-blue-100 text-blue-800 font-bold rounded-full flex items-center justify-center text-sm">
+                          {note.createdBy?.username?.substring(0, 2).toUpperCase() || "U"}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-sm font-semibold text-gray-900 truncate">
+                            {note.createdBy?.fullName || note.createdBy?.username || note.createdBy?.email}
+                          </h4>
+                          <span className="text-xs text-gray-500">
+                            {new Date(note.createdAt).toLocaleDateString(undefined, {
+                              month: "short",
+                              day: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </span>
+                        </div>
+                        {canEdit && (
+                          <div className="flex space-x-1">
+                            <button
+                              onClick={() => openEditNoteModal(note)}
+                              className="p-1 text-gray-400 hover:text-blue-600 rounded hover:bg-gray-100"
+                              title="Edit Note"
+                            >
+                              <PencilIcon className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteNote(note._id)}
+                              className="p-1 text-gray-400 hover:text-red-600 rounded hover:bg-gray-100"
+                              title="Delete Note"
+                            >
+                              <TrashIcon className="h-4 w-4" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-gray-700 whitespace-pre-wrap text-sm leading-relaxed">
+                        {note.content}
+                      </p>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Task Modal */}
       <Modal
@@ -324,12 +499,11 @@ function ProjectDetail() {
             required
             placeholder="Task title"
           />
-          <Input
+          <Textarea
             label="Description"
             value={taskForm.description}
             onChange={(e) => setTaskForm((p) => ({ ...p, description: e.target.value }))}
             placeholder="Task description (optional)"
-            as="textarea"
             rows={3}
           />
           <Select
@@ -389,11 +563,40 @@ function ProjectDetail() {
           </div>
         </form>
       </Modal>
+
+      {/* Note Modal */}
+      <Modal
+        isOpen={showNoteModal}
+        onClose={() => { setShowNoteModal(false); setEditingNote(null); setNoteForm({ content: "" }); setNoteError(""); }}
+        title={editingNote ? "Edit Note" : "Add Project Note"}
+        size="md"
+      >
+        <form onSubmit={(e) => { e.preventDefault(); handleSaveNote(noteForm.content); }} className="space-y-4">
+          {noteError && <Alert type="error" message={noteError} />}
+          <Textarea
+            label="Note Content"
+            value={noteForm.content}
+            onChange={(e) => setNoteForm({ content: e.target.value })}
+            placeholder="Type your project note here..."
+            rows={6}
+            required
+          />
+          <div className="flex justify-end space-x-3 pt-4">
+            <Button type="button" variant="secondary" onClick={() => { setShowNoteModal(false); setEditingNote(null); setNoteForm({ content: "" }); setNoteError(""); }}>
+              Cancel
+            </Button>
+            <Button type="submit">
+              {editingNote ? "Update" : "Save"}
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }
 
 function KanbanColumn({ title, count, tasks, onTaskClick, onTaskDelete }) {
+  const navigate = useNavigate();
   return (
     <div className="bg-gray-100 rounded-lg p-4 min-h-[500px]">
       <div className="flex items-center justify-between mb-4">
@@ -410,7 +613,7 @@ function KanbanColumn({ title, count, tasks, onTaskClick, onTaskDelete }) {
               task={task}
               onUpdate={onTaskClick}
               onDelete={onTaskDelete}
-              onClick={() => onTaskClick(task)}
+              onClick={() => navigate(`/tasks/${task._id}`)}
             />
           ))
         )}

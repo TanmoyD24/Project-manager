@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { authAPI } from "../api/apiClient";
 import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
@@ -101,9 +101,9 @@ function ResetPassword() {
         </form>
 
         <p className="text-center text-sm text-gray-600">
-          <a href="/login" className="font-medium text-blue-600 hover:text-blue-500">
+          <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500">
             Back to Sign In
-          </a>
+          </Link>
         </p>
       </div>
     </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { projectAPI } from "../api/apiClient";
 import { Card, CardHeader, CardContent } from "../components/ui/Card";
 import Button from "../components/ui/Button";
@@ -26,8 +26,8 @@ function ProjectCard({ project, onEdit, onDelete, onViewMembers }) {
   return (
     <Card hover className="group">
       <div className="flex items-start justify-between">
-        <div className="flex-1 min-w-0">
-          <h3 className="text-lg font-semibold text-gray-900 truncate">{project.name}</h3>
+        <Link to={`/projects/${project._id}`} className="flex-1 min-w-0 block hover:opacity-85 transition-opacity">
+          <h3 className="text-lg font-semibold text-gray-900 truncate hover:text-blue-600 transition-colors">{project.name}</h3>
           {project.description && (
             <p className="mt-1 text-sm text-gray-500 line-clamp-2">{project.description}</p>
           )}
@@ -49,24 +49,24 @@ function ProjectCard({ project, onEdit, onDelete, onViewMembers }) {
               Created {new Date(project.createdAt).toLocaleDateString()}
             </span>
           </div>
-        </div>
-        <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        </Link>
+        <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity ml-4">
           <button
-            onClick={() => onEdit(project)}
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit(project); }}
             className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
             title="Edit project"
           >
             <PencilIcon className="h-5 w-5" />
           </button>
           <button
-            onClick={() => onDelete(project)}
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(project); }}
             className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
             title="Delete project"
           >
             <TrashIcon className="h-5 w-5" />
           </button>
           <button
-            onClick={() => onViewMembers(project)}
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onViewMembers(project); }}
             className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
             title="Manage members"
           >
@@ -79,6 +79,7 @@ function ProjectCard({ project, onEdit, onDelete, onViewMembers }) {
 }
 
 function Dashboard() {
+  const navigate = useNavigate();
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -92,7 +93,11 @@ function Dashboard() {
     setLoading(true);
     try {
       const response = await projectAPI.getAll();
-      setProjects(response.data.data.projects || []);
+      const projectList = (response.data.data.projects || []).map((p) => ({
+        ...p.project,
+        role: p.role,
+      }));
+      setProjects(projectList);
       setError("");
     } catch (err) {
       setError(err.response?.data?.message || "Failed to load projects");
@@ -191,7 +196,7 @@ function Dashboard() {
               project={project}
               onEdit={openEditModal}
               onDelete={handleDelete}
-              onViewMembers={() => {}}
+              onViewMembers={(project) => navigate(`/projects/${project._id}`)}
             />
           ))}
         </div>

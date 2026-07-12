@@ -43,7 +43,7 @@ const Select = forwardRef(
           aria-describedby={error ? `${selectId}-error` : helperText ? `${selectId}-helper` : undefined}
           {...props}
         >
-          <option value="" disabled>
+          <option value="" disabled={props.required}>
             {placeholder}
           </option>
           {options.map((option) => (
